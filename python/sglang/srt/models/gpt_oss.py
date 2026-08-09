@@ -69,6 +69,7 @@ from sglang.srt.models.utils import (
     enable_fused_set_kv_buffer,
 )
 from sglang.srt.runtime_context import (
+    attention_backends,
     get_exec,
     get_forward,
     get_parallel,
@@ -418,10 +419,19 @@ class GptOssAttention(nn.Module):
             prefix=add_prefix("qkv_proj", prefix),
         )
 
-        # Choose dtype of sinks based on attention backend: trtllm_mha requires float32,
-        # others can use bfloat16
-        attn_backend = get_exec().kernel.attention_backend
-        sinks_dtype = torch.float32 if attn_backend == "trtllm_mha" else torch.bfloat16
+        # Choose dtype of sinks based on the configured backend pair (the base
+        # field is None under a split-only launch): trtllm_mha consumes
+        # float32, FA4 asserts bfloat16, and one weight serves both phases. So
+        # bfloat16 -- the dtype every non-trtllm backend takes -- whenever
+        # another backend shares the pair, and the trtllm backend upcasts at
+        # its call site (exact: the checkpoint value is bfloat16). float32
+        # stays for the pure-trtllm launch so its kernels read the weight
+        # without a copy.
+        sinks_dtype = (
+            torch.float32
+            if set(attention_backends()) == {"trtllm_mha"}
+            else torch.bfloat16
+        )
         self.sinks = nn.Parameter(
             torch.empty(self.num_heads, dtype=sinks_dtype), requires_grad=False
         )

@@ -1157,6 +1157,12 @@ class TRTLLMHAAttnBackend(FlashInferAttnBackend):
         else:
             bmm1_scale, bmm2_scale = self._get_bmm_scales(layer, q_scale)
         attention_sink = kwargs.get("sinks", None)
+        if attention_sink is not None and attention_sink.dtype != torch.float32:
+            # gpt-oss keeps this weight bfloat16 whenever another backend
+            # shares the configured pair (FA4 asserts bfloat16); this kernel
+            # consumes float32, so upcast here -- exact, and skipped for the
+            # pure-trtllm launch where the weight is already float32.
+            attention_sink = attention_sink.to(torch.float32)
 
         page_table = self._get_layer_page_table(layer, forward_batch)
 
@@ -1266,6 +1272,12 @@ class TRTLLMHAAttnBackend(FlashInferAttnBackend):
 
         # sink: additional value per head in the denominator of the softmax.
         attention_sink = kwargs.get("sinks", None)
+        if attention_sink is not None and attention_sink.dtype != torch.float32:
+            # gpt-oss keeps this weight bfloat16 whenever another backend
+            # shares the configured pair (FA4 asserts bfloat16); this kernel
+            # consumes float32, so upcast here -- exact, and skipped for the
+            # pure-trtllm launch where the weight is already float32.
+            attention_sink = attention_sink.to(torch.float32)
         bmm1_scale, bmm2_scale = self._get_bmm_scales(layer, q_scale)
 
         page_table = self._get_layer_page_table(layer, forward_batch)
