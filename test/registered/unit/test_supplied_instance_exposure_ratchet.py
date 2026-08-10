@@ -89,13 +89,6 @@ _EXPOSED = {
     ),
     ("dllm/config.py", "max_running_requests"),
     ("kv_canary/capacities.py", "chunked_prefill_size"),
-    ("eplb/expert_distribution.py", "chunked_prefill_size"),
-    ("layers/deep_gemm_wrapper/compile_utils.py", "chunked_prefill_size"),
-    ("mem_cache/kv_cache_builder.py", "chunked_prefill_size"),
-    (
-        "model_executor/model_runner_components/ngram_embedding_manager.py",
-        "chunked_prefill_size",
-    ),
     ("kv_canary/capacities.py", "cuda_graph_config"),
     ("kv_canary/token_oracle/install.py", "sampling_backend"),
     ("layers/moe/kt_ep_wrapper.py", "chunked_prefill_size"),
